@@ -14,6 +14,9 @@ class Bandit():
                        [self.prior_success_mid, self.prior_failure_mid],
                        [self.prior_success_thumb, self.prior_failure_thumb]]
         self.best_accuracy = [0, 0, 0]
+        self.undesired_mov = [[0, 0, 0],
+                              [0, 0, 0],
+                              [0, 0, 0]]
 
     def define_velec(self, ser):
         name = 'velec' + str(self.electrode)
@@ -38,7 +41,7 @@ class Bandit():
                              np.random.beta(self.prior_success_thumb, self.prior_failure_thumb)]
         return posterior_samples
 
-    def update_observation(self, rewards, accuracys):
+    def update_observation(self, rewards, accuracys, undesired_movs):
         # index finger
         if np.isclose(rewards[0], 1):
             self.prior_success_ind += 1
@@ -49,6 +52,7 @@ class Bandit():
 
         if accuracys[0] > self.best_accuracy[0]:
             self.best_accuracy[0] = accuracys[0]
+            self.undesired_mov[0] = undesired_movs[0]
 
 
         # middle finger
@@ -61,6 +65,7 @@ class Bandit():
 
         if accuracys[1] > self.best_accuracy[1]:
             self.best_accuracy[1] = accuracys[1]
+            self.undesired_mov[1] = undesired_movs[1]
 
 
         # thumb
@@ -73,6 +78,7 @@ class Bandit():
 
         if accuracys[2] > self.best_accuracy[2]:
             self.best_accuracy[2] = accuracys[2]
+            self.undesired_mov[2] = undesired_movs[2]
 
     def __repr__(self):
         string = 'Electrodes %s with Amplitude %s mA \n' % (self.electrode, self.amplitude)

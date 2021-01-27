@@ -90,6 +90,37 @@ def calc_reward(basedOn, flexions, ideal_movements):
 
         return reward, accuracy #, relative_res
 
+def calc_undesired_mov (basedOn, flexions):
+
+    if basedOn == 'ind':
+        other_flexs = np.array(flexions[2:])
+
+    elif basedOn == 'mid':
+        other_flexs = np.delete(np.array(flexions), [2, 3], 0)
+
+    elif basedOn == 'thumb':
+        other_flexs = np.delete(np.array(flexions), [4, 5], 0)
+
+    else:
+        raise ValueError('Select between ind, mid or thumb')
+
+
+    biggest_deviation = []
+    # Extract features and calculate rewards
+    for m in range(len(flexions)):
+        flexion_sequence = flexions[m]
+        initial_flex = flexion_sequence[0]
+        max_flex = max(flexion_sequence)
+        min_flex = min(flexion_sequence)
+
+        biggest_deviation.append(max((max_flex - initial_flex), (initial_flex - min_flex)))
+
+    undesired_mov = [(biggest_deviation[0] + biggest_deviation[1])/2,
+                     (biggest_deviation[2] + biggest_deviation[3])/2,
+                     (biggest_deviation[4] + biggest_deviation[5] + biggest_deviation[6])/3]
+
+    return undesired_mov
+
 def neighbor_combinations(elec_number):
     A = [[2, 1, 9, 13],
          [4, 5, 10, 14],
@@ -364,6 +395,7 @@ async def main():
             # Calculate rewards for each finger
             rewards = []
             accuracys = []
+            undesired_movs = []
             for finger in ['ind', 'mid', 'thumb']:
                 reward, accuracy = (calc_reward(finger, flexions, ideal_movements))
                 rewards.append(reward)
@@ -378,8 +410,11 @@ async def main():
                     # Initial aim_accuracy
                     aim_accuracy = merged_accuracy
 
+                undesired_mov = calc_undesired_mov(finger, flexions)
+                undesired_movs.append(undesired_mov)
+
             # Update each distribution for selected bandit
-            selected_bandit.update_observation(rewards, accuracys)
+            selected_bandit.update_observation(rewards, accuracys, undesired_movs)
 
             # save bandits with posterior distribution
             pickle.dump(bandits, open(save_name, 'wb'))
