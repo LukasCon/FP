@@ -34,17 +34,17 @@ def pick_action(basedOn, bandits):
     action = random_argmax(np.array(sampled_means))
     return action
 
-def calc_reward(basedOn, flexions, ideal_movements):
+def calc_reward(basedOn, flexions, ideal_flexions):
 
         if basedOn == 'ind':
             flexions = np.array(flexions[0:2])
-            ref_flexion = np.array(ideal_movements[0:2])
+            ref_flexion = np.array(ideal_flexions[0:2])
         elif basedOn == 'mid':
             flexions = np.array(flexions[2:4])
-            ref_flexion = np.array(ideal_movements[2:4])
+            ref_flexion = np.array(ideal_flexions[2:4])
         elif basedOn == 'thumb':
             flexions = np.array(flexions[4:6])
-            ref_flexion = np.array(ideal_movements[4:6])
+            ref_flexion = np.array(ideal_flexions[4:6])
         else:
             raise ValueError(
                 'Select between ind, mid or thumb to determine which flexion to use for reward calculation')
@@ -54,12 +54,9 @@ def calc_reward(basedOn, flexions, ideal_movements):
         # Extract features and calculate rewards
         for m in range(len(flexions)):
             flexion_sequence = flexions[m]
-            max_meas = max(flexion_sequence)
-            max_ideal = max(ref_flexion[m])
+            max_meas = max(flexion_sequence) - flexion_sequence[0]
+            max_ideal = ref_flexion[m]
             res_max = abs(max_ideal - max_meas)
-            min_meas = min(flexion_sequence)
-            min_ideal = min(ref_flexion[m])
-            res_min = abs(min_ideal - min_meas)
 
             '''# calculation of integrals
             def rel_integral(flexion_sequence):
@@ -164,16 +161,13 @@ def neighbor_combinations(elec_number):
 
     return combinations
 
-x = np.arange(100)
-ideal_movements = [np.full_like(x, 45), np.full_like(x, 67), np.full_like(x, 60), np.full_like(x, 60), np.full_like(x, 7), np.full_like(x, 44)]
-
 # Use uniform priors or posterior distribution from last experiment?
 use_uniform_priors = False
-last_experiment = 'bandits_0128.pkl'
+last_experiment = 'bandits_0129.pkl'
 
 # Overwrite posterior distributions from last experiment?
-overwrite = False
-new_file = 'bandits_0128_2.pkl'
+overwrite = True
+new_file = 'bandits_0129.pkl'
 ###########################################################################################################################################################################################
 if use_uniform_priors:
     # Define initial bandits/actionspace
@@ -211,7 +205,8 @@ else:
 n = 30
 n_deeper = 10
 aim_options = ['ind', 'mid', 'thumb']
-start_bandits = [x for x in bandits if x.electrode in [4, 6, 3, 1, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16] and x.amplitude in [10]]
+start_bandits = [x for x in bandits if x.electrode in [4, 6, 3, 1, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16] and x.amplitude in [6, 8]]
+active_bandits = []
 ###############################################################################################################################################################################################
 async def main():
     # Delay to get in position for realtime measurement
@@ -343,6 +338,23 @@ async def main():
 
         # Start streaming frames
         await connection.stream_frames(components=["6deuler", "3d"], on_packet=on_packet)
+
+        await asyncio.sleep(8)
+
+        flexions = [flexion_ind1, flexion_ind2,
+                    flexion_mid1, flexion_mid2,
+                    flexion_thumb1, flexion_thumb2,
+                    roll, pitch, yaw]
+
+        def init_ideal_mov(flexions):
+            ideal_flexions = []
+            for i in range(len(flexions)):
+                first_not_Nan = next(item for item in flexions[i] if math.isnan(item) == False)
+                ideal_flexions.append(np.nanmax(np.array(flexions[i])) - first_not_Nan)
+            return ideal_flexions
+
+        ideal_flexions = init_ideal_mov(flexions)
+        print(ideal_flexions)
         ####################################################################################################################################################################################
         # Open serial port
         ser = serial.Serial()
@@ -397,7 +409,7 @@ async def main():
             accuracys = []
             undesired_movs = []
             for finger in ['ind', 'mid', 'thumb']:
-                reward, accuracy = (calc_reward(finger, flexions, ideal_movements))
+                reward, accuracy = (calc_reward(finger, flexions, ideal_flexions))
                 rewards.append(reward)
 
                 merged_accuracy = (accuracy[0] + accuracy[1]) / 2
@@ -415,7 +427,8 @@ async def main():
 
             # Update each distribution for selected bandit
             selected_bandit.update_observation(rewards, accuracys, undesired_movs)
-
+            print(selected_bandit)
+            active_bandits.append(selected_bandit)
             # save bandits with posterior distribution
             pickle.dump(bandits, open(save_name, 'wb'))
 
@@ -426,7 +439,7 @@ async def main():
 
                 # Define new actionspace/bandits for deeper search
                 combinations = neighbor_combinations(selected_bandit.electrode)
-                new_bandits = [x for x in bandits if x.electrode in combinations and x.amplitude in [10, 12]]
+                new_bandits = [x for x in bandits if x.electrode in combinations and x.amplitude in [8, 10, 12]]
                 iter = 0
                 time_exceeded = False
                 # Stay in deeper search for n_deeper steps
@@ -466,7 +479,7 @@ async def main():
 
                     # Calculate rewards for each finger
                     for finger in ['ind', 'mid', 'thumb']:
-                        reward, accuracy = (calc_reward(finger, flexions, ideal_movements))
+                        reward, accuracy = (calc_reward(finger, flexions, ideal_flexions))
                         rewards.append(reward)
 
                         merged_accuracy = (accuracy[0] + accuracy[1]) / 2
@@ -476,7 +489,9 @@ async def main():
                             aim_accuracy = merged_accuracy
 
                     # Update each distribution for selected bandit
-                    selected_bandit.update_observation(rewards, accuracys)
+                    selected_bandit.update_observation(rewards, accuracys, undesired_movs)
+                    print(selected_bandit)
+                    active_bandits.append(selected_bandit)
                     # save bandits with posterior distribution
                     pickle.dump(bandits, open(save_name, 'wb'))
 
@@ -492,9 +507,12 @@ async def main():
                         print('Finished! For each movement a good bandit has been found.')
                         break
 
+        pickle.dump(active_bandits, open(('active' + save_name), 'wb'))
+
+        ser.close()
         ###################################################################################################################################################################################
         # Delay needed, otherwise error from connection.stop
-        await asyncio.sleep(20)
+        await asyncio.sleep(10)
 
         # Stop streaming
         await connection.stream_frames_stop()

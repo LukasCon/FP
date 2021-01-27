@@ -126,14 +126,13 @@ ser.write(b"elec 1 *pads_qty 16\r\n")
 ser.write(b"freq 35\r\n")
 
 '''velec_order = [4, 6, 3, 1, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15]
-twitch_velecs = define_twitch_velecs(velec_order)'''
+twitch_velecs = define_twitch_velecs(velec_order)
 
-time.sleep(5)
 
 velec10 = velec(11, 'close')
-velec10.cathodes([6,9])
-velec10.amplitudes([10, 10])
-velec10.widths([300, 300])
+velec10.cathodes([3])
+velec10.amplitudes([8])
+velec10.widths([300])
 velec10.anodes([2])
 print(velec10)
 velec10.define()
@@ -144,6 +143,6 @@ ser.write(b"battery ?\r\n")
 preanswer = ser.read_until(b"battery")
 answer = ser.read_until(b"\r\n")
 print(preanswer)
-print(answer)'''
+print(answer)
 
 ser.close()
