@@ -13,7 +13,6 @@ class Bandit():
         self.priors = [[self.prior_success_ind, self.prior_failure_ind],
                        [self.prior_success_mid, self.prior_failure_mid],
                        [self.prior_success_thumb, self.prior_failure_thumb]]
-
         self.best_accuracy = [0, 0, 0]
         self.undesired_mov = [[0, 0, 0],
                               [0, 0, 0],
@@ -42,7 +41,7 @@ class Bandit():
                              np.random.beta(self.prior_success_thumb, self.prior_failure_thumb)]
         return posterior_samples
 
-    def update_observation(self, rewards, accuracys, undesired_movs):
+    def update_observation(self, accuracys, undesired_movs):
         # index finger
         # Update alpha and beta NOT with reward (0 OR 1), BUT with merged accuracy in the interval [0,1]
         self.prior_success_ind += accuracys[0]

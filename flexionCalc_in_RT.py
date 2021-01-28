@@ -11,6 +11,15 @@ import pickle
 from bandits import Bandit
 import random
 
+
+def init_ideal_mov(flexions):
+
+    ideal_flexions = []
+    for i in range(len(flexions)):
+        first_not_Nan = next(item for item in flexions[i] if math.isnan(item) == False)
+        ideal_flexions.append(np.nanmax(np.array(flexions[i])) - first_not_Nan)
+    return ideal_flexions
+
 def pick_action(basedOn, bandits):
 
     if basedOn == 'ind':
@@ -22,12 +31,13 @@ def pick_action(basedOn, bandits):
     else:
         raise ValueError('Select between ind, mid or thumb to determine from which posterior distribution the next action should be picked')
 
+    # Take random samples of posterior distributions
     sampled_means = []
     for i in range(len(bandits)):
         sampled_means.append(bandits[i].get_posterior_sample()[k])
 
     def random_argmax(vector):
-        """Helper function to select argmax at random... not just first one."""
+        #Helper function to select argmax at random... not just first one
         index = np.random.choice(np.where(vector == vector.max())[0])
         return index
 
@@ -38,74 +48,48 @@ def calc_reward(basedOn, flexions, ideal_flexions):
 
         if basedOn == 'ind':
             flexions = np.array(flexions[0:2])
-            ref_flexion = np.array(ideal_flexions[0:2])
+            max_ideal = np.array(ideal_flexions[0:2])
         elif basedOn == 'mid':
             flexions = np.array(flexions[2:4])
-            ref_flexion = np.array(ideal_flexions[2:4])
+            max_ideal = np.array(ideal_flexions[2:4])
         elif basedOn == 'thumb':
             flexions = np.array(flexions[4:6])
-            ref_flexion = np.array(ideal_flexions[4:6])
+            max_ideal = np.array(ideal_flexions[4:6])
         else:
             raise ValueError(
                 'Select between ind, mid or thumb to determine which flexion to use for reward calculation')
 
-        relative_res = []
         accuracy = []
-        # Extract features and calculate rewards
+        # Extract max values and calculate rewards
         for m in range(len(flexions)):
             flexion_sequence = flexions[m]
+            # Measured max flexion in relation to the initial flexion of the sequence
             max_meas = max(flexion_sequence) - flexion_sequence[0]
-            max_ideal = ref_flexion[m]
-            res_max = abs(max_ideal - max_meas)
-
-            '''# calculation of integrals
-            def rel_integral(flexion_sequence):
-                integral = integrate.simps(flexion_sequence)  # full integral above x-axis
-                x = np.arange(flexion_sequence.shape[0])
-                y = np.full_like(x, flexion_sequence[0])
-                relative_integral = integral - integrate.simps(y, x)  # relative integral regarding the initial flexion value of the current section
-                return relative_integral
-
-            # residual relative integral
-            res_rel_int = abs(rel_integral(ref_flexion[m]) - rel_integral(flexion_sequence))
-
-            # relative residuals/ deviation in percentage
-            res_max_norm = (res_max / abs(max_ideal))
-            res_rel_int_norm = (res_rel_int / abs(rel_integral(ref_flexion[m])))
-            relative_res.append([res_max_norm, res_rel_int_norm])
-
-            # Reward function
-            accuracy.append(((1 - res_max_norm) + (1 - res_rel_int_norm))/2)'''
-
-            res_max_norm = (res_max / abs(max_ideal))
+            # Residual between max values
+            res_max = abs(max_ideal[m] - max_meas)
+            # Normalized residual
+            res_max_norm = (res_max / abs(max_ideal[m]))
+            # Percentage accuracy
             accuracy.append((1 - res_max_norm))
 
-        if accuracy[0] >= 0.5 and accuracy[1] >= 0.5:  # weighting for mcp and pip flexion residual possible
-            reward = 1
-        else:
-            reward = 0
-
-        return reward, accuracy #, relative_res
+        return accuracy
 
 def calc_undesired_mov (basedOn, flexions):
 
+    # other_flexs are the flexions of the other fingers and the wrist
     if basedOn == 'ind':
         other_flexs = np.array(flexions[2:])
-
     elif basedOn == 'mid':
         other_flexs = np.delete(np.array(flexions), [2, 3], 0)
-
     elif basedOn == 'thumb':
         other_flexs = np.delete(np.array(flexions), [4, 5], 0)
-
     else:
         raise ValueError('Select between ind, mid or thumb')
 
-
+    # Extract max and min values and calculate deviations
     biggest_deviation = []
-    # Extract features and calculate rewards
-    for m in range(len(flexions)):
-        flexion_sequence = flexions[m]
+    for m in range(len(other_flexs)):
+        flexion_sequence = other_flexs[m]
         initial_flex = flexion_sequence[0]
         max_flex = max(flexion_sequence)
         min_flex = min(flexion_sequence)
@@ -119,6 +103,8 @@ def calc_undesired_mov (basedOn, flexions):
     return undesired_mov
 
 def neighbor_combinations(elec_number):
+
+    # Matrix represents the order of electrodes in the array
     A = [[2, 1, 9, 13],
          [4, 5, 10, 14],
          [6, 7, 11, 15],
@@ -167,10 +153,10 @@ last_experiment = 'bandits_0130.pkl'
 
 # Overwrite posterior distributions from last experiment?
 overwrite = False
-new_file = 'bandits_0131_2.pkl'
+new_file = 'bandits_0132.pkl'
 ###########################################################################################################################################################################################
 if use_uniform_priors:
-    # Define initial bandits/actionspace
+    # Define initial bandits/action space
     bandits = []
     electrodes = [4, 6, 3, 1, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
     amplitudes = [6, 8, 10, 12, 14]
@@ -204,9 +190,12 @@ else:
 # Initialize parameters
 n = 30
 n_deeper = 10
+pause_between_ds = 3
+max_numb_of_ds = 3
 aim_options = ['ind', 'mid', 'thumb']
 start_bandits = [x for x in bandits if x.electrode in [4, 6, 3, 1, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16] and x.amplitude in [6, 8]]
 active_bandits = []
+
 
 ###############################################################################################################################################################################################
 async def main():
@@ -340,22 +329,13 @@ async def main():
         # Start streaming frames
         await connection.stream_frames(components=["6deuler", "3d"], on_packet=on_packet)
 
+        # Time to perform ideal movements
         await asyncio.sleep(8)
-
-        flexions = [flexion_ind1, flexion_ind2,
-                    flexion_mid1, flexion_mid2,
-                    flexion_thumb1, flexion_thumb2,
-                    roll, pitch, yaw]
-
-        def init_ideal_mov(flexions):
-            ideal_flexions = []
-            for i in range(len(flexions)):
-                first_not_Nan = next(item for item in flexions[i] if math.isnan(item) == False)
-                ideal_flexions.append(np.nanmax(np.array(flexions[i])) - first_not_Nan)
-            return ideal_flexions
-
+        # Initialize ideal movements
+        flexions = [flexion_ind1, flexion_ind2, flexion_mid1, flexion_mid2, flexion_thumb1, flexion_thumb2, roll, pitch, yaw]
         ideal_flexions = init_ideal_mov(flexions)
         print(ideal_flexions)
+
         ####################################################################################################################################################################################
         # Open serial port
         ser = serial.Serial()
@@ -365,11 +345,14 @@ async def main():
         ser.open()
         print(ser)
 
+        # Initial commands for FES device
         ser.write(b"iam DESKTOP\r\n")
         ser.write(b"elec 1 *pads_qty 16\r\n")
         ser.write(b"freq 35\r\n")
 
         #####################################################################################################################################################################################
+        deep_searchs = pd.DataFrame(data={'time': [], 'finger': []})
+
         for t in range(n):
             deeper_search = False
             print('t:', t)
@@ -381,6 +364,7 @@ async def main():
             # Choose action based on maximum of success probability which comes from random sample of the posterior distributions of the bandits
             action = pick_action(aim, start_bandits)
             selected_bandit = start_bandits[action]
+            # Define velec corresponding to selected bandit
             velec = selected_bandit.define_velec(ser)
 
             before_stim = len(framesOfPositions)
@@ -395,36 +379,53 @@ async def main():
             after_stim = len(framesOfPositions)
             print('after', after_stim)
 
-            # Stream marker coordinates and calculate flexion
+            # Get flexions for the recent stimulation section
             flexions = [flexion_ind1[before_stim:after_stim], flexion_ind2[before_stim:after_stim],
                         flexion_mid1[before_stim:after_stim], flexion_mid2[before_stim:after_stim],
                         flexion_thumb1[before_stim:after_stim], flexion_thumb2[before_stim:after_stim],
                         roll[before_stim:after_stim], pitch[before_stim:after_stim], yaw[before_stim:after_stim]]
 
-            # Calculate rewards for each finger
-            rewards = []
+            # Calculate rewards/accuracys for each finger
             accuracys = []
             undesired_movs = []
             for finger in ['ind', 'mid', 'thumb']:
-                reward, accuracy = (calc_reward(finger, flexions, ideal_flexions))
-                rewards.append(reward)
+                accuracy = (calc_reward(finger, flexions, ideal_flexions))
 
+                # Take mean of PIP and MCP joint accuracy
                 merged_accuracy = (accuracy[0] + accuracy[1]) / 2
                 accuracys.append(merged_accuracy)
 
+                # Undesired movements are the flexions of the other fingers and the wrist
+                # especially the wrist flexion is not wanted and therefore the deep search is inhibit if the sum of wrist flexion is > 20degree
                 undesired_mov = calc_undesired_mov(finger, flexions)
                 undesired_movs.append(undesired_mov)
                 undesired_wrist_mov = undesired_mov[2]
 
                 # Check if observation is good enough for deeper search
                 if merged_accuracy >= 0.5 and undesired_wrist_mov < (20/3) and finger in aim_options:
-                    deeper_search = True
-                    aim = finger
-                    # Initial aim_accuracy
-                    aim_accuracy = merged_accuracy
+
+                    # Check if deep search for this finger was applied recently without success
+                    previous_ds = deep_searchs[deep_searchs['finger'] == finger]
+                    if previous_ds.empty:
+
+                        deeper_search = True
+                        # Initial aim_accuracy
+                        aim = finger
+                        aim_accuracy = merged_accuracy
+
+                    else:
+                        numb_of_prev_ds = previous_ds.shape[0]
+                        time_since_last_ds = t - int(previous_ds.tail(1)['time'])
+                        # too recent deepsearch for the same finger or too many unsuccessful deepsearch attempts inhibit new deepsearch due to impending fatigue
+                        if time_since_last_ds > pause_between_ds and numb_of_prev_ds < max_numb_of_ds:
+
+                            deeper_search = True
+                            # Initial aim_accuracy
+                            aim = finger
+                            aim_accuracy = merged_accuracy
 
             # Update each distribution for selected bandit
-            selected_bandit.update_observation(rewards, accuracys, undesired_movs)
+            selected_bandit.update_observation(accuracys, undesired_movs)
             print(selected_bandit)
             active_bandits.append([selected_bandit.electrode, selected_bandit.amplitude])
             # save bandits with posterior distribution
@@ -435,9 +436,14 @@ async def main():
 
                 print('Deep search was entered: With the %s an accuracy of %s for the movement of %s was achieved' % (selected_bandit, aim_accuracy, aim))
 
+                # Add deep search to deep search archive
+                deep_searchs = deep_searchs.append({'time': t, 'finger': aim}, ignore_index= True)
+
                 # Define new actionspace/bandits for deeper search
                 combinations = neighbor_combinations(selected_bandit.electrode)
                 new_bandits = [x for x in bandits if x.electrode in combinations and x.amplitude in [8, 10, 12]]
+
+                # Initialize iterator for deeper search
                 iter = 0
                 time_exceeded = False
                 # Stay in deeper search for n_deeper steps
@@ -448,8 +454,10 @@ async def main():
                         time_exceeded = True
                         break
 
+                    # Pick action based on random sample of posterior distribution
                     new_action = pick_action(aim, new_bandits)
                     selected_bandit = new_bandits[new_action]
+                    # Define velec
                     velec = selected_bandit.define_velec(ser)
 
                     before_stim = len(framesOfPositions)
@@ -457,29 +465,24 @@ async def main():
 
                     # Pause between stimulations
                     await asyncio.sleep(0.5)
-                    # Stimulate predefined velecs and set event markers
-                    #await connection.set_qtm_event(velec.name)
+                    # Stimulate predefined velecs
                     velec.stim(1)
 
                     after_stim = len(framesOfPositions)
                     print('after', after_stim)
 
-                    '''flexions = []
-                    for _ in range(9):
-                        flexions.append(random.sample(range(0, 120), 100))'''
-
-                    # Stream marker coordinates and calculate flexion
+                    # Get flexions for the recent stimulation section
                     flexions = [flexion_ind1[before_stim:after_stim], flexion_ind2[before_stim:after_stim],
                                 flexion_mid1[before_stim:after_stim], flexion_mid2[before_stim:after_stim],
                                 flexion_thumb1[before_stim:after_stim], flexion_thumb2[before_stim:after_stim],
                                 roll[before_stim:after_stim], pitch[before_stim:after_stim],
                                 yaw[before_stim:after_stim]]
 
-                    # Calculate rewards for each finger
+                    # Calculate rewards/accuracys for each finger
                     for finger in ['ind', 'mid', 'thumb']:
-                        reward, accuracy = (calc_reward(finger, flexions, ideal_flexions))
-                        rewards.append(reward)
+                        accuracy = (calc_reward(finger, flexions, ideal_flexions))
 
+                        # Take mean of PIP and MCP joint accuracy
                         merged_accuracy = (accuracy[0] + accuracy[1]) / 2
                         accuracys.append(merged_accuracy)
 
@@ -487,7 +490,7 @@ async def main():
                             aim_accuracy = merged_accuracy
 
                     # Update each distribution for selected bandit
-                    selected_bandit.update_observation(rewards, accuracys, undesired_movs)
+                    selected_bandit.update_observation(accuracys, undesired_movs)
                     print(selected_bandit)
                     active_bandits.append([selected_bandit.electrode, selected_bandit.amplitude])
                     # save bandits with posterior distribution
@@ -505,9 +508,12 @@ async def main():
                         print('Finished! For each movement a good bandit has been found.')
                         break
 
+        # Save list of active bandits for eventual trace back of stimulation order
         pickle.dump(active_bandits, open(('active' + save_name), 'wb'))
 
+        # Close serial port
         ser.close()
+
         ###################################################################################################################################################################################
         # Delay needed, otherwise error from connection.stop
         await asyncio.sleep(10)
@@ -517,6 +523,7 @@ async def main():
 
         await connection.stop()
 
+        # Plot the flexions for the whole measurement
         fulltime = len(framesOfPositions)
         fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, sharey= True)
         ax1.plot(range(fulltime), flexion_ind1, label=('mcp flex ind'))
@@ -541,8 +548,6 @@ async def main():
         ax4.legend()
         ax4.grid()
         plt.show()
-
-
 
 
 if __name__ == "__main__":
