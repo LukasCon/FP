@@ -10,7 +10,7 @@ import serial
 import time
 import pickle
 
-QTM_FILE = pkg_resources.resource_filename("qtm", "data\Grasp1_20201210.qtm")
+QTM_FILE = pkg_resources.resource_filename("qtm", "data\Samuel_0128.qtm")
 
 async def main():
     # Delay to get in position for realtime measurement
@@ -27,7 +27,7 @@ async def main():
     # Take control of qtm, context manager will automatically release control after scope end
     async with qtm.TakeControl(connection, "password"):
 
-        realtime = True
+        realtime = False
 
         if realtime:
             # New measurement
@@ -222,7 +222,7 @@ async def main():
 
         else:
             # Length of measurement for non-realtime
-            await asyncio.sleep(15)
+            await asyncio.sleep(240)
 
         # Stop streaming
         await connection.stream_frames_stop()

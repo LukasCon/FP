@@ -162,12 +162,12 @@ def neighbor_combinations(elec_number):
     return combinations
 
 # Use uniform priors or posterior distribution from last experiment?
-use_uniform_priors = False
-last_experiment = 'bandits_0129.pkl'
+use_uniform_priors = True
+last_experiment = 'bandits_0130.pkl'
 
 # Overwrite posterior distributions from last experiment?
-overwrite = True
-new_file = 'bandits_0129.pkl'
+overwrite = False
+new_file = 'bandits_0131_2.pkl'
 ###########################################################################################################################################################################################
 if use_uniform_priors:
     # Define initial bandits/actionspace
@@ -207,6 +207,7 @@ n_deeper = 10
 aim_options = ['ind', 'mid', 'thumb']
 start_bandits = [x for x in bandits if x.electrode in [4, 6, 3, 1, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16] and x.amplitude in [6, 8]]
 active_bandits = []
+
 ###############################################################################################################################################################################################
 async def main():
     # Delay to get in position for realtime measurement
@@ -394,10 +395,6 @@ async def main():
             after_stim = len(framesOfPositions)
             print('after', after_stim)
 
-            '''flexions = []
-            for _ in range(9):
-                flexions.append(random.sample(range(0, 120), 100))'''
-
             # Stream marker coordinates and calculate flexion
             flexions = [flexion_ind1[before_stim:after_stim], flexion_ind2[before_stim:after_stim],
                         flexion_mid1[before_stim:after_stim], flexion_mid2[before_stim:after_stim],
@@ -415,20 +412,21 @@ async def main():
                 merged_accuracy = (accuracy[0] + accuracy[1]) / 2
                 accuracys.append(merged_accuracy)
 
+                undesired_mov = calc_undesired_mov(finger, flexions)
+                undesired_movs.append(undesired_mov)
+                undesired_wrist_mov = undesired_mov[2]
+
                 # Check if observation is good enough for deeper search
-                if merged_accuracy >= 0.5 and finger in aim_options:
+                if merged_accuracy >= 0.5 and undesired_wrist_mov < (20/3) and finger in aim_options:
                     deeper_search = True
                     aim = finger
                     # Initial aim_accuracy
                     aim_accuracy = merged_accuracy
 
-                undesired_mov = calc_undesired_mov(finger, flexions)
-                undesired_movs.append(undesired_mov)
-
             # Update each distribution for selected bandit
             selected_bandit.update_observation(rewards, accuracys, undesired_movs)
             print(selected_bandit)
-            active_bandits.append(selected_bandit)
+            active_bandits.append([selected_bandit.electrode, selected_bandit.amplitude])
             # save bandits with posterior distribution
             pickle.dump(bandits, open(save_name, 'wb'))
 
@@ -491,7 +489,7 @@ async def main():
                     # Update each distribution for selected bandit
                     selected_bandit.update_observation(rewards, accuracys, undesired_movs)
                     print(selected_bandit)
-                    active_bandits.append(selected_bandit)
+                    active_bandits.append([selected_bandit.electrode, selected_bandit.amplitude])
                     # save bandits with posterior distribution
                     pickle.dump(bandits, open(save_name, 'wb'))
 

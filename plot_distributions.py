@@ -3,7 +3,7 @@ from scipy.stats import beta
 import matplotlib.pyplot as plt
 import numpy as np
 
-bandits = pickle.load(open('bandits_0128.pkl', 'rb'))
+bandits = pickle.load(open('bandits_0131.pkl', 'rb'))
 
 numbBandits = 5
 

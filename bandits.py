@@ -13,6 +13,7 @@ class Bandit():
         self.priors = [[self.prior_success_ind, self.prior_failure_ind],
                        [self.prior_success_mid, self.prior_failure_mid],
                        [self.prior_success_thumb, self.prior_failure_thumb]]
+
         self.best_accuracy = [0, 0, 0]
         self.undesired_mov = [[0, 0, 0],
                               [0, 0, 0],
@@ -43,25 +44,20 @@ class Bandit():
 
     def update_observation(self, rewards, accuracys, undesired_movs):
         # index finger
-        if np.isclose(rewards[0], 1):
-            self.prior_success_ind += 1
-        elif np.isclose(rewards[0], 0):
-            self.prior_failure_ind += 1
-        else:
-            raise ValueError('Rewards should be 0 or 1 in Bernoulli Bandit')
+        # Update alpha and beta NOT with reward (0 OR 1), BUT with merged accuracy in the interval [0,1]
+        self.prior_success_ind += accuracys[0]
+        self.prior_failure_ind += 1 - accuracys[0]
 
+        # Update best accuracy
         if accuracys[0] > self.best_accuracy[0]:
             self.best_accuracy[0] = accuracys[0]
             self.undesired_mov[0] = undesired_movs[0]
 
 
         # middle finger
-        if np.isclose(rewards[1], 1):
-            self.prior_success_mid += 1
-        elif np.isclose(rewards[1], 0):
-            self.prior_failure_mid += 1
-        else:
-            raise ValueError('Rewards should be 0 or 1 in Bernoulli Bandit')
+        # update alpha and beta NOT with reward (0 OR 1), BUT with merged accuracy in the interval [0,1]
+        self.prior_success_mid += accuracys[1]
+        self.prior_failure_mid += 1 - accuracys[1]
 
         if accuracys[1] > self.best_accuracy[1]:
             self.best_accuracy[1] = accuracys[1]
@@ -69,12 +65,9 @@ class Bandit():
 
 
         # thumb
-        if np.isclose(rewards[2], 1):
-            self.prior_success_thumb += 1
-        elif np.isclose(rewards[2], 0):
-            self.prior_failure_thumb += 1
-        else:
-            raise ValueError('Rewards should be 0 or 1 in Bernoulli Bandit')
+        # update alpha and beta NOT with reward (0 OR 1), BUT with merged accuracy in the interval [0,1]
+        self.prior_success_thumb += accuracys[2]
+        self.prior_failure_thumb += 1 - accuracys[2]
 
         if accuracys[2] > self.best_accuracy[2]:
             self.best_accuracy[2] = accuracys[2]
