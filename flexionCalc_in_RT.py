@@ -17,7 +17,7 @@ def init_ideal_mov(flexions):
     ideal_flexions = []
     for i in range(len(flexions)):
         first_not_Nan = next(item for item in flexions[i] if math.isnan(item) == False)
-        ideal_flexions.append(np.nanmax(np.array(flexions[i])) - first_not_Nan)
+        ideal_flexions.append((np.nanmax(np.array(flexions[i]))) - first_not_Nan)
     return ideal_flexions
 
 def pick_action(basedOn, bandits):
@@ -62,15 +62,21 @@ def calc_reward(basedOn, flexions, ideal_flexions):
         accuracy = []
         # Extract max values and calculate rewards
         for m in range(len(flexions)):
-            flexion_sequence = flexions[m]
             # Measured max flexion in relation to the initial flexion of the sequence
-            max_meas = max(flexion_sequence) - flexion_sequence[0]
-            # Residual between max values
-            res_max = abs(max_ideal[m] - max_meas)
-            # Normalized residual
-            res_max_norm = (res_max / abs(max_ideal[m]))
+            max_meas = max(flexions[m]) - flexions[m][0]
+            # Error between max values
+            err_max = abs(max_ideal[m] - max_meas)
+            # Normalized error
+            err_max_norm = (err_max / abs(max_ideal[m]))
+
+            if err_max_norm > 1:
+                err_max_norm = 1
+                print('ATTENTION! The measurement yields a normalized error greater than 1. \n'
+                      'This would lead to an negative accuracy, thus the normalized error is considered 1 in the following calculation.\n'
+                      'HINT: You may check the maximal flexion in your ideal movements.')
+
             # Percentage accuracy
-            accuracy.append((1 - res_max_norm))
+            accuracy.append((1 - err_max_norm))
 
         return accuracy
 
@@ -351,7 +357,9 @@ async def main():
         ser.write(b"freq 35\r\n")
 
         #####################################################################################################################################################################################
-        deep_searchs = pd.DataFrame(data={'time': [], 'finger': []})
+
+        # Archive for deep searches
+        deep_searches = pd.DataFrame(data={'time': [], 'finger': []})
 
         for t in range(n):
             deeper_search = False
@@ -405,7 +413,7 @@ async def main():
                 if merged_accuracy >= 0.5 and undesired_wrist_mov < (20/3) and finger in aim_options:
 
                     # Check if deep search for this finger was applied recently without success
-                    previous_ds = deep_searchs[deep_searchs['finger'] == finger]
+                    previous_ds = deep_searches[deep_searches['finger'] == finger]
                     if previous_ds.empty:
 
                         deeper_search = True
@@ -437,7 +445,7 @@ async def main():
                 print('Deep search was entered: With the %s an accuracy of %s for the movement of %s was achieved' % (selected_bandit, aim_accuracy, aim))
 
                 # Add deep search to deep search archive
-                deep_searchs = deep_searchs.append({'time': t, 'finger': aim}, ignore_index= True)
+                deep_searches = deep_searches.append({'time': t, 'finger': aim}, ignore_index= True)
 
                 # Define new actionspace/bandits for deeper search
                 combinations = neighbor_combinations(selected_bandit.electrode)
