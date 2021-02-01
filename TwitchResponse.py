@@ -159,7 +159,7 @@ last_experiment = 'bandits_0130.pkl'
 
 # Overwrite posterior distributions from last experiment?
 overwrite = False
-new_file = 'bandits_0132.pkl'
+new_file = 'bandits_0201_7_TR.pkl'
 ###########################################################################################################################################################################################
 if use_uniform_priors:
     # Define initial bandits/action space
@@ -199,7 +199,7 @@ n_deeper = 10
 pause_between_ds = 3
 max_numb_of_ds = 3
 aim_options = ['ind', 'mid', 'thumb']
-start_bandits = [x for x in bandits if x.electrode in [4, 6, 3, 1, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16] and x.amplitude in [6, 8]]
+start_bandits = [x for x in bandits if x.electrode in [4, 6, 3, 1, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16] and x.amplitude in [6, 8, 10]]
 active_bandits = []
 
 
@@ -361,7 +361,7 @@ async def main():
         # Archive for deep searches
         deep_searches = pd.DataFrame(data={'time': [], 'finger': []})
 
-        for t in range(n):
+        for t in range(len(start_bandits)):
             deeper_search = False
             print('t:', t)
             # aim defines which finger/ posterior distribution is used to pick the following action
@@ -369,9 +369,7 @@ async def main():
             print(aim_options)
             print(aim)
 
-            # Choose action based on maximum of success probability which comes from random sample of the posterior distributions of the bandits
-            action = pick_action(aim, start_bandits)
-            selected_bandit = start_bandits[action]
+            selected_bandit = start_bandits[t]
             # Define velec corresponding to selected bandit
             velec = selected_bandit.define_velec(ser)
 
@@ -449,7 +447,7 @@ async def main():
 
                 # Define new actionspace/bandits for deeper search
                 combinations = neighbor_combinations(selected_bandit.electrode)
-                new_bandits = [x for x in bandits if x.electrode in combinations and x.amplitude in [8, 10, 12]]
+                new_bandits = [x for x in bandits if x.electrode in combinations and x.amplitude in [10]]
 
                 # Initialize iterator for deeper search
                 iter = 0
@@ -458,13 +456,11 @@ async def main():
                 while aim_accuracy <= 0.8:
                     iter += 1
                     print('iteration', iter)
-                    if iter == n_deeper:
+                    if iter == len(new_bandits)+1:
                         time_exceeded = True
                         break
 
-                    # Pick action based on random sample of posterior distribution
-                    new_action = pick_action(aim, new_bandits)
-                    selected_bandit = new_bandits[new_action]
+                    selected_bandit = new_bandits[iter]
                     # Define velec
                     velec = selected_bandit.define_velec(ser)
 

@@ -3,7 +3,7 @@ from scipy.stats import beta
 import matplotlib.pyplot as plt
 import numpy as np
 
-bandits = pickle.load(open('bandits_0131.pkl', 'rb'))
+bandits = pickle.load(open('bandits_0201_6.pkl', 'rb'))
 
 numbBandits = 5
 
@@ -62,7 +62,7 @@ numb_of_stim = []
 for i in range(len(bandits)):
     best_accuracys.append(bandits[i].best_accuracy)
     posterior_means.append(bandits[i].get_posterior_mean())
-    numb_of_stim.append([bandits[i].prior_success_ind + bandits[i].prior_failure_ind])
+    numb_of_stim.append([bandits[i].prior_success_ind + bandits[i].prior_failure_ind - 2])
 
 
 fig2, axs = plt.subplots(1, 3)
