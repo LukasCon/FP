@@ -155,11 +155,11 @@ def neighbor_combinations(elec_number):
 
 # Use uniform priors or posterior distribution from last experiment?
 use_uniform_priors = False
-last_experiment = 'bandits_0201_6.pkl'
+last_experiment = 'bandits_0202_5.pkl'
 
 # Overwrite posterior distributions from last experiment?
 overwrite = False
-new_file = 'bandits_0201_7.pkl'
+new_file = 'bandits_0202_6.pkl'
 ###########################################################################################################################################################################################
 if use_uniform_priors:
     # Define initial bandits/action space
@@ -197,9 +197,9 @@ else:
 n = 30
 n_deeper = 10
 pause_between_ds = 3
-max_numb_of_ds = 3
+max_numb_of_ds = 2
 aim_options = ['ind', 'mid', 'thumb']
-start_bandits = [x for x in bandits if x.electrode in [4, 6, 3, 1, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16] and x.amplitude in [6, 8, 10]]
+start_bandits = [x for x in bandits if x.electrode in [4, 6, 3, 1, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16] and x.amplitude in [6, 8]]
 active_bandits = []
 
 
@@ -435,7 +435,9 @@ async def main():
             # Update each distribution for selected bandit
             selected_bandit.update_observation(accuracys, undesired_movs)
             print(selected_bandit)
-            active_bandits.append([selected_bandit.electrode, selected_bandit.amplitude])
+            print('Accuracys:', accuracys)
+            print('Wrist movement:', undesired_wrist_mov)
+            active_bandits.append([selected_bandit.electrode, selected_bandit.amplitude, accuracys, undesired_movs])
             # save bandits with posterior distribution
             pickle.dump(bandits, open(save_name, 'wb'))
 
@@ -455,7 +457,7 @@ async def main():
                 iter = 0
                 time_exceeded = False
                 # Stay in deeper search for n_deeper steps
-                while aim_accuracy <= 0.8:
+                while aim_accuracy <= 0.75:
                     iter += 1
                     print('iteration', iter)
                     if iter == n_deeper:
@@ -506,7 +508,9 @@ async def main():
                     # Update each distribution for selected bandit
                     selected_bandit.update_observation(accuracys, undesired_movs)
                     print(selected_bandit)
-                    active_bandits.append([selected_bandit.electrode, selected_bandit.amplitude])
+                    print('Accuracys:', accuracys)
+                    print('Wrist movement:', undesired_mov[2])
+                    active_bandits.append([selected_bandit.electrode, selected_bandit.amplitude, accuracys, undesired_movs])
                     # save bandits with posterior distribution
                     pickle.dump(bandits, open(save_name, 'wb'))
 

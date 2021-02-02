@@ -80,6 +80,16 @@ def calc_reward(basedOn, flexions, ideal_flexions):
 
         return accuracy
 
+def calc_features(flexions):
+    features = []
+    # Extract max values and calculate rewards
+    for m in range(len(flexions)):
+        # Measured max flexion in relation to the initial flexion of the sequence
+        max_meas = max(flexions[m]) - flexions[m][0]
+        features.append([max_meas])
+
+    return features
+
 def calc_undesired_mov (basedOn, flexions):
 
     # other_flexs are the flexions of the other fingers and the wrist
@@ -155,11 +165,11 @@ def neighbor_combinations(elec_number):
 
 # Use uniform priors or posterior distribution from last experiment?
 use_uniform_priors = True
-last_experiment = 'bandits_0130.pkl'
+last_experiment = 'bandits_0202_TR.pkl'
 
 # Overwrite posterior distributions from last experiment?
 overwrite = False
-new_file = 'bandits_0201_7_TR.pkl'
+new_file = 'bandits_0202_TR.pkl'
 ###########################################################################################################################################################################################
 if use_uniform_priors:
     # Define initial bandits/action space
@@ -199,7 +209,7 @@ n_deeper = 10
 pause_between_ds = 3
 max_numb_of_ds = 3
 aim_options = ['ind', 'mid', 'thumb']
-start_bandits = [x for x in bandits if x.electrode in [4, 6, 3, 1, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16] and x.amplitude in [6, 8, 10]]
+start_bandits = [x for x in bandits if x.electrode in [4, 6, 3, 1, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16] and x.amplitude in [10]]
 active_bandits = []
 
 
@@ -360,7 +370,7 @@ async def main():
 
         # Archive for deep searches
         deep_searches = pd.DataFrame(data={'time': [], 'finger': []})
-
+        all_sample_vectors = []
         for t in range(len(start_bandits)):
             deeper_search = False
             print('t:', t)
@@ -433,7 +443,22 @@ async def main():
             # Update each distribution for selected bandit
             selected_bandit.update_observation(accuracys, undesired_movs)
             print(selected_bandit)
-            active_bandits.append([selected_bandit.electrode, selected_bandit.amplitude])
+            print('Accuracys:', accuracys)
+            print('Wrist movement:', undesired_wrist_mov)
+            active_bandits.append([selected_bandit.electrode, selected_bandit.amplitude, accuracys, undesired_movs])
+
+            # Extract features to sample vector for clustering
+            features = calc_features(flexions)
+            vector = [[selected_bandit.electrode], [selected_bandit.amplitude]]
+            vector.extend(features)
+            sample_vec = pd.DataFrame(np.transpose(np.array(vector)),
+                                      columns=['electrode', 'amplitude', 'flex_ind1_max', 'flex_ind2_max',
+                                               'flex_mid1_max', 'flex_mid2_max', 'flex_thumb1_max',
+                                               'flex_thumb2_max', 'roll_max', 'pitch_max', 'yaw_max'])
+
+            all_sample_vectors.append(sample_vec)
+            pickle.dump(all_sample_vectors, open('samples'+save_name, 'wb'))
+
             # save bandits with posterior distribution
             pickle.dump(bandits, open(save_name, 'wb'))
 
@@ -453,7 +478,7 @@ async def main():
                 iter = 0
                 time_exceeded = False
                 # Stay in deeper search for n_deeper steps
-                while aim_accuracy <= 0.8:
+                while aim_accuracy <= 0.75:
                     iter += 1
                     print('iteration', iter)
                     if iter == len(new_bandits)+1:
@@ -496,7 +521,22 @@ async def main():
                     # Update each distribution for selected bandit
                     selected_bandit.update_observation(accuracys, undesired_movs)
                     print(selected_bandit)
-                    active_bandits.append([selected_bandit.electrode, selected_bandit.amplitude])
+                    print('Accuracys:', accuracys)
+                    print('Wrist movement:', undesired_mov[2])
+                    active_bandits.append([selected_bandit.electrode, selected_bandit.amplitude, accuracys, undesired_movs])
+
+                    # Extract features to sample vector for clustering
+                    features = calc_features(flexions)
+                    vector = [[selected_bandit.electrode], [selected_bandit.amplitude]]
+                    vector.extend(features)
+                    sample_vec = pd.DataFrame(np.array(vector),
+                                              columns=['electrode', 'flex_ind1_max', 'flex_ind2_max',
+                                                       'flex_mid1_max', 'flex_mid2_max', 'flex_thumb1_max',
+                                                       'flex_thumb2_max', 'roll_max', 'pitch_max', 'yaw_max'])
+
+                    all_sample_vectors.append(sample_vec)
+                    pickle.dump(all_sample_vectors, open('samples' + save_name, 'wb'))
+
                     # save bandits with posterior distribution
                     pickle.dump(bandits, open(save_name, 'wb'))
 
