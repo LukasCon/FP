@@ -165,11 +165,11 @@ def neighbor_combinations(elec_number):
 
 # Use uniform priors or posterior distribution from last experiment?
 use_uniform_priors = True
-last_experiment = 'bandits_0202_TR.pkl'
+last_experiment = 'bandits_0203_TR.pkl'
 
 # Overwrite posterior distributions from last experiment?
 overwrite = False
-new_file = 'bandits_0202_TR.pkl'
+new_file = 'bandits_0203_TR.pkl'
 ###########################################################################################################################################################################################
 if use_uniform_priors:
     # Define initial bandits/action space
@@ -349,7 +349,8 @@ async def main():
         await asyncio.sleep(8)
         # Initialize ideal movements
         flexions = [flexion_ind1, flexion_ind2, flexion_mid1, flexion_mid2, flexion_thumb1, flexion_thumb2, roll, pitch, yaw]
-        ideal_flexions = init_ideal_mov(flexions)
+        #ideal_flexions = init_ideal_mov(flexions)
+        ideal_flexions = [32.49853470936666, 70.11386446668475, 46.08865448894144, 60.9950212501936, 33.635889516624474, 37.220711070234955, 0.3842819929122925, 1.5308434963226318, 2.707037925720215]
         print(ideal_flexions)
 
         ####################################################################################################################################################################################
@@ -485,7 +486,7 @@ async def main():
                         time_exceeded = True
                         break
 
-                    selected_bandit = new_bandits[iter]
+                    selected_bandit = new_bandits[iter-1]
                     # Define velec
                     velec = selected_bandit.define_velec(ser)
 
@@ -508,12 +509,17 @@ async def main():
                                 yaw[before_stim:after_stim]]
 
                     # Calculate rewards/accuracys for each finger
+                    accuracys = []
+                    undesired_movs = []
                     for finger in ['ind', 'mid', 'thumb']:
                         accuracy = (calc_reward(finger, flexions, ideal_flexions))
 
                         # Take mean of PIP and MCP joint accuracy
                         merged_accuracy = (accuracy[0] + accuracy[1]) / 2
                         accuracys.append(merged_accuracy)
+
+                        undesired_mov = calc_undesired_mov(finger, flexions)
+                        undesired_movs.append(undesired_mov)
 
                         if finger == aim:
                             aim_accuracy = merged_accuracy
@@ -526,8 +532,8 @@ async def main():
                     active_bandits.append([selected_bandit.electrode, selected_bandit.amplitude, accuracys, undesired_movs])
 
                     # Extract features to sample vector for clustering
-                    features = calc_features(flexions)
-                    vector = [[selected_bandit.electrode], [selected_bandit.amplitude]]
+                    '''features = np.array(calc_features(flexions))
+                    vector = np.array([selected_bandit.electrode], [selected_bandit.amplitude])
                     vector.extend(features)
                     sample_vec = pd.DataFrame(np.array(vector),
                                               columns=['electrode', 'flex_ind1_max', 'flex_ind2_max',
@@ -535,7 +541,7 @@ async def main():
                                                        'flex_thumb2_max', 'roll_max', 'pitch_max', 'yaw_max'])
 
                     all_sample_vectors.append(sample_vec)
-                    pickle.dump(all_sample_vectors, open('samples' + save_name, 'wb'))
+                    pickle.dump(all_sample_vectors, open('samples' + save_name, 'wb'))'''
 
                     # save bandits with posterior distribution
                     pickle.dump(bandits, open(save_name, 'wb'))

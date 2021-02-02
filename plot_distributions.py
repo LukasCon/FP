@@ -3,9 +3,9 @@ from scipy.stats import beta
 import matplotlib.pyplot as plt
 import numpy as np
 
-bandits = pickle.load(open('bandits_0202_5.pkl', 'rb'))
+bandits = pickle.load(open('bandits_0203_3.pkl', 'rb'))
 
-numbBandits = 5
+numbBandits = 20
 
 best_accuracys = []
 posterior_means = []

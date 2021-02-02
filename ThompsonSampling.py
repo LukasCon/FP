@@ -155,11 +155,11 @@ def neighbor_combinations(elec_number):
 
 # Use uniform priors or posterior distribution from last experiment?
 use_uniform_priors = False
-last_experiment = 'bandits_0202_5.pkl'
+last_experiment = 'bandits_0203_2.pkl'
 
 # Overwrite posterior distributions from last experiment?
 overwrite = False
-new_file = 'bandits_0202_6.pkl'
+new_file = 'bandits_0203_3.pkl'
 ###########################################################################################################################################################################################
 if use_uniform_priors:
     # Define initial bandits/action space
@@ -199,7 +199,7 @@ n_deeper = 10
 pause_between_ds = 3
 max_numb_of_ds = 2
 aim_options = ['ind', 'mid', 'thumb']
-start_bandits = [x for x in bandits if x.electrode in [4, 6, 3, 1, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16] and x.amplitude in [6, 8]]
+start_bandits = [x for x in bandits if x.electrode in [4, 6, 3, 1, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16] and x.amplitude in [6, 8, 10]]
 active_bandits = []
 
 
@@ -339,7 +339,9 @@ async def main():
         await asyncio.sleep(8)
         # Initialize ideal movements
         flexions = [flexion_ind1, flexion_ind2, flexion_mid1, flexion_mid2, flexion_thumb1, flexion_thumb2, roll, pitch, yaw]
-        ideal_flexions = init_ideal_mov(flexions)
+        # ideal_flexions = init_ideal_mov(flexions)
+        ideal_flexions = [32.49853470936666, 70.11386446668475, 46.08865448894144, 60.9950212501936, 33.635889516624474,
+                          37.220711070234955, 0.3842819929122925, 1.5308434963226318, 2.707037925720215]
         print(ideal_flexions)
 
         ####################################################################################################################################################################################
@@ -451,7 +453,7 @@ async def main():
 
                 # Define new actionspace/bandits for deeper search
                 combinations = neighbor_combinations(selected_bandit.electrode)
-                new_bandits = [x for x in bandits if x.electrode in combinations and x.amplitude in [8, 10, 12]]
+                new_bandits = [x for x in bandits if x.electrode in combinations and x.amplitude in [8, 10]]
 
                 # Initialize iterator for deeper search
                 iter = 0
