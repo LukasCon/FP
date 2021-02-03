@@ -3,9 +3,9 @@ from scipy.stats import beta
 import matplotlib.pyplot as plt
 import numpy as np
 
-bandits = pickle.load(open('bandits_0203_3.pkl', 'rb'))
+bandits = pickle.load(open('bandits_0205_2.pkl', 'rb'))
 
-numbBandits = 20
+numbBandits = 10
 
 best_accuracys = []
 posterior_means = []
@@ -21,22 +21,19 @@ colors = [cmap(i) for i in np.linspace(0, 1, numbBandits)]
 titles = ['index', 'middle', 'thumb']
 
 for k in range(3):
-    # vector for best accuracy regarding finger k
-    acc_vector.append(np.array(best_accuracys)[:, k])
-    index = [np.random.choice(np.where(acc_vector[k] == acc_vector[k].max())[0])]
-    print(np.where(acc_vector[k] == acc_vector[k].max())[0], index)
+
+    best_accuracys = []
+    posterior_means = []
+    for i in range(len(bandits)):
+        best_accuracys.append(bandits[i].best_accuracy[k])
+        posterior_means.append(bandits[i].get_posterior_mean()[k])
+
+    index = [best_accuracys.index(x) for x in sorted(best_accuracys, reverse=True)[:numbBandits]]
     print(bandits[index[0]])
-
-    pos_vector.append(np.array(posterior_means)[:, k])
-    index.append([np.random.choice(np.where(pos_vector[k] == pos_vector[k].max())[0])][0])
-    print(index[1])
     print(bandits[index[1]])
-
-
-    while len(index) < numbBandits:
-        new_index = np.random.choice(np.where(acc_vector[k] != 0)[0])
-        if new_index not in index:
-            index.append(new_index)
+    print(bandits[index[2]])
+    index_best_pos = [posterior_means.index(x) for x in sorted(posterior_means, reverse=True)]
+    print(bandits[index_best_pos[0]])
 
     # Plot
     a, b, x, rv = [], [], [], []

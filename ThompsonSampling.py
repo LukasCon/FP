@@ -155,11 +155,11 @@ def neighbor_combinations(elec_number):
 
 # Use uniform priors or posterior distribution from last experiment?
 use_uniform_priors = False
-last_experiment = 'bandits_0203_2.pkl'
+last_experiment = 'bandits_0205_2.pkl'
 
 # Overwrite posterior distributions from last experiment?
 overwrite = False
-new_file = 'bandits_0203_3.pkl'
+new_file = 'bandits_0205_3.pkl'
 ###########################################################################################################################################################################################
 if use_uniform_priors:
     # Define initial bandits/action space
@@ -195,7 +195,7 @@ else:
 
 # Initialize parameters
 n = 30
-n_deeper = 10
+n_deeper = 5
 pause_between_ds = 3
 max_numb_of_ds = 2
 aim_options = ['ind', 'mid', 'thumb']
@@ -339,9 +339,8 @@ async def main():
         await asyncio.sleep(8)
         # Initialize ideal movements
         flexions = [flexion_ind1, flexion_ind2, flexion_mid1, flexion_mid2, flexion_thumb1, flexion_thumb2, roll, pitch, yaw]
-        # ideal_flexions = init_ideal_mov(flexions)
-        ideal_flexions = [32.49853470936666, 70.11386446668475, 46.08865448894144, 60.9950212501936, 33.635889516624474,
-                          37.220711070234955, 0.3842819929122925, 1.5308434963226318, 2.707037925720215]
+        ideal_flexions = init_ideal_mov(flexions)
+        # ideal_flexions = [38.882360890319895, 57.7009392512095, 40.999522279338464, 52.91076042153381, 34.16658387795074, 36.76024372548064, 1.6138026714324951, 0.2644829750061035, 0.3314223289489746]
         print(ideal_flexions)
 
         ####################################################################################################################################################################################
@@ -365,7 +364,7 @@ async def main():
 
         for t in range(n):
             deeper_search = False
-            print('t:', t)
+            print('\nt:', t)
             # aim defines which finger/ posterior distribution is used to pick the following action
             aim = aim_options[0]
             print(aim_options)

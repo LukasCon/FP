@@ -73,7 +73,7 @@ class Bandit():
             self.undesired_mov[2] = undesired_movs[2]
 
     def __repr__(self):
-        string = 'Electrodes %s with Amplitude %s mA \n' % (self.electrode, self.amplitude)
+        string = 'Electrodes %s with Amplitude %s mA' % (self.electrode, self.amplitude)
 
         return string
 
