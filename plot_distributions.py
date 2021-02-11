@@ -3,7 +3,7 @@ from scipy.stats import beta
 import matplotlib.pyplot as plt
 import numpy as np
 
-bandits = pickle.load(open('bandits_0211_6.pkl', 'rb'))
+bandits = pickle.load(open('bandits_0205.pkl', 'rb'))
 
 numbBandits = 10
 
@@ -29,11 +29,11 @@ for k in range(3):
         posterior_means.append(bandits[i].get_posterior_mean()[k])
 
     index = [best_accuracys.index(x) for x in sorted(best_accuracys, reverse=True)[:numbBandits]]
-    print(bandits[index[0]])
-    print(bandits[index[1]])
-    print(bandits[index[2]])
+    print('Best accuracy:', bandits[index[0]])
+    print('2nd best accuracy:', bandits[index[1]])
+    print('3rd best accuracy:', bandits[index[2]])
     index_best_pos = [posterior_means.index(x) for x in sorted(posterior_means, reverse=True)]
-    print(bandits[index_best_pos[0]])
+    print('Highest posterior mean:',bandits[index_best_pos[0]])
 
     # Plot
     a, b, x, rv = [], [], [], []
