@@ -12,6 +12,65 @@ from bandits import Bandit
 import random
 
 
+def vector(point1, point2, df_pos):
+    vector = np.array([df_pos.loc[point2, 'x'] - df_pos.loc[point1, 'x'],
+                       df_pos.loc[point2, 'y'] - df_pos.loc[point1, 'y'],
+                       df_pos.loc[point2, 'z'] - df_pos.loc[point1, 'z']])
+    return vector
+
+def normalize(x):
+    return np.array([x[i] / np.linalg.norm(x) for i in range(len(x))])
+
+def plane(point1, point2, point3, df_pos):
+    p0, p1, p2 = [df_pos.loc[point1, 'x':'z'],
+                  df_pos.loc[point2, 'x':'z'],
+                  df_pos.loc[point3, 'x':'z']]
+    x0, y0, z0 = p0
+    x1, y1, z1 = p1
+    x2, y2, z2 = p2
+
+    ux, uy, uz = u = [x1 - x0, y1 - y0, z1 - z0]
+    vx, vy, vz = v = [x2 - x0, y2 - y0, z2 - z0]
+    u_cross_v = [uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx]
+
+    # point = np.array(p0)
+    normal = np.array(u_cross_v)
+    normal = normalize(normal)
+    # d = -point.dot(normal)
+
+    return normal
+
+def flexion_mcp(finger, df_pos):
+    r_norm = normalize(vector(finger + '1', finger + '2', df_pos))
+    n_frontal = plane('wrist1', 'wrist2', 'wrist3', df_pos)
+
+    if finger == 'thumb':
+        r_aux = vector('mid1', 'mid2', df_pos)
+        ux, uy, uz = r_aux
+        vx, vy, vz = n_frontal
+        n_sagittal = normalize([uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx])
+        n = n_sagittal
+    else:
+        n = n_frontal
+
+    flexion = math.acos(
+        (np.dot(r_norm, n)) / (np.linalg.norm(r_norm) * np.linalg.norm(n))) - math.pi / 2
+    flexion = math.degrees(flexion)
+    return flexion
+
+def flexion_pip(finger, df_pos):
+    r1 = normalize(vector(finger + '1', finger + '2', df_pos))
+    r2 = normalize(vector(finger + '2', finger + '3', df_pos))
+
+    flexion = math.acos((np.dot(r1, r2)) / (np.linalg.norm(r1) * np.linalg.norm(r2)))
+
+    if finger == 'thumb':
+        flexion = math.degrees(flexion)
+    else:
+        flexion = math.degrees(flexion)
+
+    return flexion
+
 def init_ideal_mov(flexions):
 
     ideal_flexions = []
@@ -155,11 +214,11 @@ def neighbor_combinations(elec_number):
 
 # Use uniform priors or posterior distribution from last experiment?
 use_uniform_priors = False
-last_experiment = 'bandits_0205_2.pkl'
+last_experiment = 'bandits_0211_5.pkl'
 
 # Overwrite posterior distributions from last experiment?
 overwrite = False
-new_file = 'bandits_0205_3.pkl'
+new_file = 'bandits_0211_6.pkl'
 ###########################################################################################################################################################################################
 if use_uniform_priors:
     # Define initial bandits/action space
@@ -195,7 +254,7 @@ else:
 
 # Initialize parameters
 n = 30
-n_deeper = 5
+n_deeper = 8
 pause_between_ds = 3
 max_numb_of_ds = 2
 aim_options = ['ind', 'mid', 'thumb']
@@ -263,84 +322,23 @@ async def main():
             pitch.append(rotation[1])
             yaw.append(rotation[2])
 
-            def vector(point1, point2):
-                vector = np.array([df_pos.loc[point2, 'x'] - df_pos.loc[point1, 'x'],
-                                   df_pos.loc[point2, 'y'] - df_pos.loc[point1, 'y'],
-                                   df_pos.loc[point2, 'z'] - df_pos.loc[point1, 'z']])
-                return vector
-
-            def normalize(x):
-                return np.array([x[i] / np.linalg.norm(x) for i in range(len(x))])
-
-            def plane(point1, point2, point3):
-
-                p0, p1, p2 = [df_pos.loc[point1, 'x':'z'],
-                              df_pos.loc[point2, 'x':'z'],
-                              df_pos.loc[point3, 'x':'z']]
-                x0, y0, z0 = p0
-                x1, y1, z1 = p1
-                x2, y2, z2 = p2
-
-                ux, uy, uz = u = [x1 - x0, y1 - y0, z1 - z0]
-                vx, vy, vz = v = [x2 - x0, y2 - y0, z2 - z0]
-                u_cross_v = [uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx]
-
-                # point = np.array(p0)
-                normal = np.array(u_cross_v)
-                normal = normalize(normal)
-                # d = -point.dot(normal)
-
-                return normal
-
-            def flexion_mcp(finger):
-                r_norm = normalize(vector(finger + '1', finger + '2'))
-                n_frontal = plane('wrist1', 'wrist2', 'wrist3')
-
-                if finger == 'thumb':
-                    r_aux = vector('mid1', 'mid2')
-                    ux, uy, uz = r_aux
-                    vx, vy, vz = n_frontal
-                    n_sagittal = normalize([uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx])
-                    n = n_sagittal
-                else:
-                    n = n_frontal
-
-                flexion = math.acos(
-                    (np.dot(r_norm, n)) / (np.linalg.norm(r_norm) * np.linalg.norm(n))) - math.pi / 2
-                flexion = math.degrees(flexion)
-                return flexion
-
-            def flexion_pip(finger):
-
-                r1 = normalize(vector(finger + '1', finger + '2'))
-                r2 = normalize(vector(finger + '2', finger + '3'))
-
-                flexion = math.acos((np.dot(r1, r2)) / (np.linalg.norm(r1) * np.linalg.norm(r2)))
-
-                if finger == 'thumb':
-                    flexion = math.degrees(flexion)
-                else:
-                    flexion = math.degrees(flexion)
-
-                return flexion
-
-            flexion_ind1.append(flexion_mcp('ind'))
-            flexion_ind2.append(flexion_pip('ind'))
-            flexion_mid1.append(flexion_mcp('mid'))
-            flexion_mid2.append(flexion_pip('mid'))
-            flexion_thumb1.append(flexion_mcp('thumb'))
-            flexion_thumb2.append(flexion_pip('thumb'))
+            flexion_ind1.append(flexion_mcp('ind', df_pos))
+            flexion_ind2.append(flexion_pip('ind', df_pos))
+            flexion_mid1.append(flexion_mcp('mid', df_pos))
+            flexion_mid2.append(flexion_pip('mid', df_pos))
+            flexion_thumb1.append(flexion_mcp('thumb', df_pos))
+            flexion_thumb2.append(flexion_pip('thumb', df_pos))
 
 
         # Start streaming frames
-        await connection.stream_frames(components=["6deuler", "3d"], on_packet=on_packet)
+        await connection.stream_frames(frames='frequency:10', components=["6deuler", "3d"], on_packet=on_packet)
 
         # Time to perform ideal movements
         await asyncio.sleep(8)
         # Initialize ideal movements
         flexions = [flexion_ind1, flexion_ind2, flexion_mid1, flexion_mid2, flexion_thumb1, flexion_thumb2, roll, pitch, yaw]
-        ideal_flexions = init_ideal_mov(flexions)
-        # ideal_flexions = [38.882360890319895, 57.7009392512095, 40.999522279338464, 52.91076042153381, 34.16658387795074, 36.76024372548064, 1.6138026714324951, 0.2644829750061035, 0.3314223289489746]
+        #ideal_flexions = init_ideal_mov(flexions)
+        ideal_flexions = [44.50769638948388, 56.57963540906185, 46.85315766047187, 64.08543169011739, 35.86241168840495, 44.86415214033699, 1.5969201922416687, 0.6094362735748291, 0.0]
         print(ideal_flexions)
 
         ####################################################################################################################################################################################
@@ -358,10 +356,10 @@ async def main():
         ser.write(b"freq 35\r\n")
 
         #####################################################################################################################################################################################
-
+        await asyncio.sleep(0.5)
         # Archive for deep searches
         deep_searches = pd.DataFrame(data={'time': [], 'finger': []})
-
+        vlines = []
         for t in range(n):
             deeper_search = False
             print('\nt:', t)
@@ -381,12 +379,19 @@ async def main():
 
             # Pause between stimulations
             await asyncio.sleep(0.5)
+            print(len(framesOfPositions), 'before event')
             # Stimulate predefined velecs and set event markers
             await connection.set_qtm_event(velec.name)
-            velec.stim(1)
-
+            print(len(framesOfPositions), 'after event, before stim on')
+            velec.stim_on()
+            await asyncio.sleep(1)
+            velec.stim_off()
+            print(len(framesOfPositions), 'after stim off')
+            await asyncio.sleep(0.5)
             after_stim = len(framesOfPositions)
             print('after', after_stim)
+            vlines.append(after_stim)
+
 
             # Get flexions for the recent stimulation section
             flexions = [flexion_ind1[before_stim:after_stim], flexion_ind2[before_stim:after_stim],
@@ -433,7 +438,7 @@ async def main():
                             aim = finger
                             aim_accuracy = merged_accuracy
 
-            # Update each distribution for selected bandit
+        # Update each distribution for selected bandit
             selected_bandit.update_observation(accuracys, undesired_movs)
             print(selected_bandit)
             print('Accuracys:', accuracys)
@@ -444,7 +449,6 @@ async def main():
 
             ################################################################################################################################################################################
             if deeper_search:
-
                 print('Deep search was entered: With the %s an accuracy of %s for the movement of %s was achieved' % (selected_bandit, aim_accuracy, aim))
 
                 # Add deep search to deep search archive
@@ -477,10 +481,15 @@ async def main():
                     # Pause between stimulations
                     await asyncio.sleep(0.5)
                     # Stimulate predefined velecs
-                    velec.stim(1)
-
+                    print(len(framesOfPositions),'before stim on')
+                    velec.stim_on()
+                    await asyncio.sleep(1)
+                    velec.stim_off()
+                    print(len(framesOfPositions), 'after stim off')
+                    await asyncio.sleep(0.5)
                     after_stim = len(framesOfPositions)
                     print('after', after_stim)
+                    vlines.append(after_stim)
 
                     # Get flexions for the recent stimulation section
                     flexions = [flexion_ind1[before_stim:after_stim], flexion_ind2[before_stim:after_stim],
@@ -511,6 +520,7 @@ async def main():
                     print(selected_bandit)
                     print('Accuracys:', accuracys)
                     print('Wrist movement:', undesired_mov[2])
+
                     active_bandits.append([selected_bandit.electrode, selected_bandit.amplitude, accuracys, undesired_movs])
                     # save bandits with posterior distribution
                     pickle.dump(bandits, open(save_name, 'wb'))
@@ -550,16 +560,19 @@ async def main():
         ax1.set(xlabel='', ylabel='ind flexion (°)')
         ax1.legend()
         ax1.grid()
+        ax1.vlines(vlines, 0, 75)
         ax2.plot(range(fulltime), flexion_mid1, label=('mcp flex mid'))
         ax2.plot(range(fulltime), flexion_mid2, label=('pip flex mid'))
         ax2.set(xlabel='', ylabel='mid flexion (°)')
         ax2.legend()
         ax2.grid()
+        ax2.vlines(vlines, 0, 75)
         ax3.plot(range(fulltime), flexion_thumb1, label=('mcp flex thumb'))
         ax3.plot(range(fulltime), flexion_thumb2, label=('pip flex thumb'))
         ax3.set(xlabel='', ylabel='thumb flexion (°)')
         ax3.legend()
         ax3.grid()
+        ax3.vlines(vlines, -20, 60)
         ax4.plot(range(fulltime), roll[:], label=('roll'))
         ax4.plot(range(fulltime), pitch[:], label=('pitch'))
         ax4.plot(range(fulltime), yaw[:], label=('yaw'))

@@ -190,23 +190,26 @@ async def main():
                 return message
 
             # Define virtual electrodes for twitch stimulation
-            velec_order = [4, 6, 3, 1, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+            velec_order = [4, 6, 3]
             velecs = []
             for i in range(len(velec_order)):
                 name = 'velec' + str(velec_order[i])
                 velecs.append(velec(8, name)) #random velec number (here: 8) doesnt matter because redefinition for each velec
                 velecs[i].cathodes([velec_order[i]])
-                velecs[i].amplitudes([10])
+                velecs[i].amplitudes([8])
                 velecs[i].widths([300])
                 velecs[i].anodes([2])
                 # print(velecs[i])
                 velecs[i].define()
-
+                print('before', len(framesOfPositions))
                 # Pause between stimulations
                 time.sleep(0.5)
+                print(len(framesOfPositions))
                 # Stimulate predefined velecs and set event markers
                 await connection.set_qtm_event(name)
+                print(len(framesOfPositions))
                 velecs[i].stim(1)
+                print('after', len(framesOfPositions))
 
             '''velec10 = velec(11, 'close')
             velec10.cathodes([4, 6])
@@ -222,7 +225,7 @@ async def main():
 
         else:
             # Length of measurement for non-realtime
-            await asyncio.sleep(240)
+            await asyncio.sleep(10)
 
         # Stop streaming
         await connection.stream_frames_stop()
@@ -335,6 +338,7 @@ async def main():
         ax1.set(xlabel='', ylabel='ind flexion (°)')
         ax1.legend()
         ax1.grid()
+        ax1.vlines([0.5, 1.3, 2.4],-20,60)
         ax2.plot(range(fulltime), flexion_mid1, label=('mcp flex mid'))
         ax2.plot(range(fulltime), flexion_mid2, label=('pip flex mid'))
         ax2.set(xlabel='', ylabel='mid flexion (°)')

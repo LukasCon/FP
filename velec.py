@@ -1,5 +1,6 @@
 import time
 import serial
+import asyncio
 
 class Velec():
     def __init__(self, ser, number, name='test'):
@@ -80,11 +81,13 @@ class Velec():
         # print(bytes(conv_to_message(self), 'utf-8'))
         self.ser.write(bytes(conv_to_message(self), 'utf-8'))
 
-    def stim(self,seconds = 2):
+    def stim_on(self):#,seconds = 2):
         message_start = "stim %s\r\n" %(self.name)
         # print(bytes(message_start, 'utf-8'))
         self.ser.write(bytes(message_start, 'utf-8'))
-        time.sleep(seconds)
+        # time.sleep(seconds)
+
+    def stim_off(self):
         message_stop = "stim off\r\n"
         # print(bytes(message_stop, 'utf-8'))
         self.ser.write(bytes(message_stop, 'utf-8'))
