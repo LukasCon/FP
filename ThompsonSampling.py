@@ -247,6 +247,13 @@ if use_uniform_priors:
 else:
     bandits = pickle.load(open(last_experiment, 'rb'))
 
+    # Reset accuracys and undesired movements
+    for i in range(len(bandits)):
+        bandits[i].best_accuracy = [0, 0, 0]
+        bandits[i].undesired_mov = [[0, 0, 0],
+                                    [0, 0, 0],
+                                    [0, 0, 0]]
+
 if overwrite:
     save_name = last_experiment
 else:
