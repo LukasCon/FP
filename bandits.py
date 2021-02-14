@@ -14,6 +14,7 @@ class Bandit():
                        [self.prior_success_mid, self.prior_failure_mid],
                        [self.prior_success_thumb, self.prior_failure_thumb]]
         self.best_accuracy = [0, 0, 0]
+        self.accuracys = []
         self.undesired_mov = [[0, 0, 0],
                               [0, 0, 0],
                               [0, 0, 0]]
@@ -42,35 +43,33 @@ class Bandit():
         return posterior_samples
 
     def update_observation(self, accuracys, undesired_movs):
+        # Add currently observed accuracys to bandit's history
+        self.accuracys.append(accuracys)
+
+        for k in range(3):
+            # Update alpha and beta with merged accuracy in the interval [0,1]
+            self.priors[k][0] += accuracys[k] * 2
+            self.priors[k][1] += (1 - accuracys[k]) * 2
+
+            # Update best accuracy
+            if accuracys[k] > self.best_accuracy[k]:
+                self.best_accuracy[k] = accuracys[k]
+                self.undesired_mov[k] = undesired_movs[k]
+
         # index finger
         # Update alpha and beta NOT with reward (0 OR 1), BUT with merged accuracy in the interval [0,1]
-        self.prior_success_ind += accuracys[0]
-        self.prior_failure_ind += 1 - accuracys[0]
-
-        # Update best accuracy
-        if accuracys[0] > self.best_accuracy[0]:
-            self.best_accuracy[0] = accuracys[0]
-            self.undesired_mov[0] = undesired_movs[0]
-
+        self.prior_success_ind += accuracys[0] * 2
+        self.prior_failure_ind += (1 - accuracys[0]) * 2
 
         # middle finger
         # update alpha and beta NOT with reward (0 OR 1), BUT with merged accuracy in the interval [0,1]
-        self.prior_success_mid += accuracys[1]
-        self.prior_failure_mid += 1 - accuracys[1]
-
-        if accuracys[1] > self.best_accuracy[1]:
-            self.best_accuracy[1] = accuracys[1]
-            self.undesired_mov[1] = undesired_movs[1]
-
+        self.prior_success_mid += accuracys[1] * 2
+        self.prior_failure_mid += (1 - accuracys[1]) * 2
 
         # thumb
         # update alpha and beta NOT with reward (0 OR 1), BUT with merged accuracy in the interval [0,1]
-        self.prior_success_thumb += accuracys[2]
-        self.prior_failure_thumb += 1 - accuracys[2]
-
-        if accuracys[2] > self.best_accuracy[2]:
-            self.best_accuracy[2] = accuracys[2]
-            self.undesired_mov[2] = undesired_movs[2]
+        self.prior_success_thumb += accuracys[2] * 2
+        self.prior_failure_thumb += (1 - accuracys[2]) * 2
 
     def __repr__(self):
         string = 'Electrodes %s with Amplitude %s mA' % (self.electrode, self.amplitude)
