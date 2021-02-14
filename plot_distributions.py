@@ -3,7 +3,7 @@ from scipy.stats import beta
 import matplotlib.pyplot as plt
 import numpy as np
 
-bandits = pickle.load(open('bandits_0205.pkl', 'rb'))
+bandits = pickle.load(open('bandits_0211_8.pkl', 'rb'))
 
 numbBandits = 10
 
@@ -39,6 +39,10 @@ for k in range(3):
     a, b, x, rv = [], [], [], []
 
     for i in range(len(index)):
+
+        '''a.append(bandits[index[i]].priors[k][0])
+        b.append(bandits[index[i]].priors[k][1])'''
+
         if k == 0:
             a.append(bandits[index[i]].prior_success_ind)
             b.append(bandits[index[i]].prior_failure_ind)
@@ -68,8 +72,9 @@ numb_of_stim = []
 for i in range(len(bandits)):
     best_accuracys.append(bandits[i].best_accuracy)
     posterior_means.append(bandits[i].get_posterior_mean())
-    numb_of_stim.append([bandits[i].prior_success_ind + bandits[i].prior_failure_ind - 2])
+    numb_of_stim.append(bandits[i].prior_success_ind + bandits[i].prior_failure_ind - 2)
 
+print('Number of Stimulations:', sum(numb_of_stim))
 
 fig2, axs = plt.subplots(1, 3)
 
