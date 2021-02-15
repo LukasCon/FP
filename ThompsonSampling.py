@@ -214,11 +214,11 @@ def neighbor_combinations(elec_number):
 
 # Use uniform priors or posterior distribution from last experiment?
 use_uniform_priors = False
-last_experiment = 'bandits_0211_5.pkl'
+last_experiment = 'bandits_0217_3.pkl'
 
 # Overwrite posterior distributions from last experiment?
 overwrite = False
-new_file = 'bandits_0211_6.pkl'
+new_file = 'bandits_0218_5.pkl'
 ###########################################################################################################################################################################################
 if use_uniform_priors:
     # Define initial bandits/action space
@@ -265,7 +265,7 @@ n_deeper = 8
 pause_between_ds = 3
 max_numb_of_ds = 2
 aim_options = ['ind', 'mid', 'thumb']
-start_bandits = [x for x in bandits if x.electrode in [4, 6, 3, 1, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16] and x.amplitude in [6, 8, 10]]
+start_bandits = [x for x in bandits if x.electrode in [4, 6, 3, 1, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16] and x.amplitude in [8, 10]]
 active_bandits = []
 
 
@@ -341,11 +341,11 @@ async def main():
         await connection.stream_frames(frames='frequency:10', components=["6deuler", "3d"], on_packet=on_packet)
 
         # Time to perform ideal movements
-        await asyncio.sleep(8)
+        # await asyncio.sleep(8)
         # Initialize ideal movements
         flexions = [flexion_ind1, flexion_ind2, flexion_mid1, flexion_mid2, flexion_thumb1, flexion_thumb2, roll, pitch, yaw]
         #ideal_flexions = init_ideal_mov(flexions)
-        ideal_flexions = [44.50769638948388, 56.57963540906185, 46.85315766047187, 64.08543169011739, 35.86241168840495, 44.86415214033699, 1.5969201922416687, 0.6094362735748291, 0.0]
+        ideal_flexions = [35.946132810686834, 60.51440073878825, 44.35013573887927, 59.451238560892094, 28.543467439621736, 38.741753732943295, 1.9215731620788574, 1.9310812950134277, 1.0939593315124512]
         print(ideal_flexions)
 
         ####################################################################################################################################################################################
@@ -519,6 +519,11 @@ async def main():
                         undesired_mov = calc_undesired_mov(finger, flexions)
                         undesired_movs.append(undesired_mov)
 
+                        # Check if other finger (than aim) achieved the desired accuracy
+                        if merged_accuracy >= 0.75 and finger != aim and finger in aim_options:
+                            print('Success: Good bandit found! With the %s an accuracy of %s for the movement of %s was achieved' % (selected_bandit, merged_accuracy, finger))
+                            aim_options.remove(finger)
+
                         if finger == aim:
                             aim_accuracy = merged_accuracy
 
@@ -558,6 +563,9 @@ async def main():
         await connection.stream_frames_stop()
 
         await connection.stop()
+
+        with open(('flexions' + save_name), 'wb') as f:
+            pickle.dump(flexions, f)
 
         # Plot the flexions for the whole measurement
         fulltime = len(framesOfPositions)
