@@ -313,7 +313,7 @@ async def main():
         # Labels need to be in the same order as in the AIM model used in QTM
         labels = ['wrist1', 'wrist2', 'wrist3', 'wrist4', 'ind1', 'ind2', 'ind3', 'mid1', 'mid2', 'mid3', 'thumb1', 'thumb2', 'thumb3']
 
-        ###################################################################################################################################################################################
+        ################################################################################################################
         # on_packet defines what happens for every streamed frame
         def on_packet(packet):
             info, bodies = packet.get_6d_euler()
@@ -464,7 +464,7 @@ async def main():
             # save bandits with posterior distribution
             pickle.dump(bandits, open(new_file, 'wb'))
 
-            ################################################################################################################################################################################
+            ############################################################################################################
             if deeper_search:
                 print('Deep search was entered: With the %s an accuracy of %s for the movement of %s was achieved' % (selected_bandit, aim_accuracy, aim))
 
@@ -564,7 +564,7 @@ async def main():
         # Close serial port
         ser.close()
 
-        ###################################################################################################################################################################################
+        ################################################################################################################
         # Delay needed, otherwise error from connection.stop
         await asyncio.sleep(10)
 
