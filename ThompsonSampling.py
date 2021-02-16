@@ -11,6 +11,26 @@ import pickle
 from bandits import Bandit
 import random
 
+# Name the measurement
+new_file = 'bandits_0218_5.pkl'
+
+# Use uniform priors or posterior distribution from last experiment?
+use_uniform_priors = False
+last_experiment = 'bandits_0217_3.pkl'
+
+# Capture new ideal movements before the measurement or use predefined ideal flexions?
+capture_new_ideal_mov = False
+old_ideal_flexions = [35.946132810686834, 60.51440073878825,                        # ind_mcp, ind_pip
+                      44.35013573887927, 59.451238560892094,                        # mid_mcp, mid_pip
+                      28.543467439621736, 38.741753732943295,                       # thumb_mcp, thumb_pip
+                      1.9215731620788574, 1.9310812950134277, 1.0939593315124512]   # roll, pitch, yaw
+
+# Initialize parameters
+n = 30                          # max number of stimulations in 'normal' search
+n_deeper = 8                    # max number of stimulations in deep search
+pause_between_ds = 3            # min number of stimulations between two deep searches of the same finger
+max_numb_of_ds = 2              # max number of deep searches for the same finger
+aim_options = ['ind', 'mid', 'thumb']
 
 def vector(point1, point2, df_pos):
     vector = np.array([df_pos.loc[point2, 'x'] - df_pos.loc[point1, 'x'],
@@ -212,16 +232,9 @@ def neighbor_combinations(elec_number):
 
     return combinations
 
-# Use uniform priors or posterior distribution from last experiment?
-use_uniform_priors = False
-last_experiment = 'bandits_0217_3.pkl'
-
-# Overwrite posterior distributions from last experiment?
-overwrite = False
-new_file = 'bandits_0218_5.pkl'
-###########################################################################################################################################################################################
+########################################################################################################################
 if use_uniform_priors:
-    # Define initial bandits/action space
+    # Define all bandits/ whole action space
     bandits = []
     electrodes = [4, 6, 3, 1, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
     amplitudes = [6, 8, 10, 12, 14]
@@ -247,29 +260,18 @@ if use_uniform_priors:
 else:
     bandits = pickle.load(open(last_experiment, 'rb'))
 
-    # Reset accuracys and undesired movements
+    # Reset best accuracys and undesired movements
     for i in range(len(bandits)):
         bandits[i].best_accuracy = [0, 0, 0]
         bandits[i].undesired_mov = [[0, 0, 0],
                                     [0, 0, 0],
                                     [0, 0, 0]]
 
-if overwrite:
-    save_name = last_experiment
-else:
-    save_name = new_file
 
-# Initialize parameters
-n = 30
-n_deeper = 8
-pause_between_ds = 3
-max_numb_of_ds = 2
-aim_options = ['ind', 'mid', 'thumb']
+# Define bandits/actionspace for 'normal' search
 start_bandits = [x for x in bandits if x.electrode in [4, 6, 3, 1, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16] and x.amplitude in [8, 10]]
-active_bandits = []
 
-
-###############################################################################################################################################################################################
+########################################################################################################################
 async def main():
     # Delay to get in position for realtime measurement
     await asyncio.sleep(5)
@@ -338,17 +340,21 @@ async def main():
 
 
         # Start streaming frames
+        # Frequency is reduced to 10Hz
         await connection.stream_frames(frames='frequency:10', components=["6deuler", "3d"], on_packet=on_packet)
 
-        # Time to perform ideal movements
-        # await asyncio.sleep(8)
-        # Initialize ideal movements
-        flexions = [flexion_ind1, flexion_ind2, flexion_mid1, flexion_mid2, flexion_thumb1, flexion_thumb2, roll, pitch, yaw]
-        #ideal_flexions = init_ideal_mov(flexions)
-        ideal_flexions = [35.946132810686834, 60.51440073878825, 44.35013573887927, 59.451238560892094, 28.543467439621736, 38.741753732943295, 1.9215731620788574, 1.9310812950134277, 1.0939593315124512]
+        # Define ideal felxions
+        if capture_new_ideal_mov:
+            # Time to perform ideal movements
+            await asyncio.sleep(8)
+            # Initialize ideal movements
+            flexions = [flexion_ind1, flexion_ind2, flexion_mid1, flexion_mid2, flexion_thumb1, flexion_thumb2, roll, pitch, yaw]
+            ideal_flexions = init_ideal_mov(flexions)
+        else:
+            ideal_flexions = old_ideal_flexions
         print(ideal_flexions)
 
-        ####################################################################################################################################################################################
+        ################################################################################################################
         # Open serial port
         ser = serial.Serial()
         ser.baudrate = 115200
@@ -362,11 +368,17 @@ async def main():
         ser.write(b"elec 1 *pads_qty 16\r\n")
         ser.write(b"freq 35\r\n")
 
-        #####################################################################################################################################################################################
+        ################################################################################################################
         await asyncio.sleep(0.5)
+
         # Archive for deep searches
         deep_searches = pd.DataFrame(data={'time': [], 'finger': []})
+        # Initialize history of selected bandits
+        active_bandits = []
+        # veritcal lines to visualize the stimulation sequences
         vlines = []
+
+        # Start 'normal' search
         for t in range(n):
             deeper_search = False
             print('\nt:', t)
@@ -382,22 +394,20 @@ async def main():
             velec = selected_bandit.define_velec(ser)
 
             before_stim = len(framesOfPositions)
-            print('before', before_stim)
 
             # Pause between stimulations
             await asyncio.sleep(0.5)
-            print(len(framesOfPositions), 'before event')
             # Stimulate predefined velecs and set event markers
             await connection.set_qtm_event(velec.name)
-            print(len(framesOfPositions), 'after event, before stim on')
             velec.stim_on()
+            # Stimulation time
             await asyncio.sleep(1)
             velec.stim_off()
-            print(len(framesOfPositions), 'after stim off')
             await asyncio.sleep(0.5)
+
             after_stim = len(framesOfPositions)
-            print('after', after_stim)
             vlines.append(after_stim)
+            print('Sequence:', before_stim, '-', after_stim)
 
 
             # Get flexions for the recent stimulation section
@@ -452,7 +462,7 @@ async def main():
             print('Wrist movement:', undesired_wrist_mov)
             active_bandits.append([selected_bandit.electrode, selected_bandit.amplitude, accuracys, undesired_movs])
             # save bandits with posterior distribution
-            pickle.dump(bandits, open(save_name, 'wb'))
+            pickle.dump(bandits, open(new_file, 'wb'))
 
             ################################################################################################################################################################################
             if deeper_search:
@@ -483,20 +493,19 @@ async def main():
                     velec = selected_bandit.define_velec(ser)
 
                     before_stim = len(framesOfPositions)
-                    print('before', before_stim)
 
                     # Pause between stimulations
                     await asyncio.sleep(0.5)
                     # Stimulate predefined velecs
-                    print(len(framesOfPositions),'before stim on')
                     velec.stim_on()
+                    # Stimulation time
                     await asyncio.sleep(1)
                     velec.stim_off()
-                    print(len(framesOfPositions), 'after stim off')
                     await asyncio.sleep(0.5)
+
                     after_stim = len(framesOfPositions)
-                    print('after', after_stim)
                     vlines.append(after_stim)
+                    print('Sequence:', before_stim, '-', after_stim)
 
                     # Get flexions for the recent stimulation section
                     flexions = [flexion_ind1[before_stim:after_stim], flexion_ind2[before_stim:after_stim],
@@ -535,7 +544,7 @@ async def main():
 
                     active_bandits.append([selected_bandit.electrode, selected_bandit.amplitude, accuracys, undesired_movs])
                     # save bandits with posterior distribution
-                    pickle.dump(bandits, open(save_name, 'wb'))
+                    pickle.dump(bandits, open(new_file, 'wb'))
 
                 if time_exceeded:
                     print('Failure: No good bandit found in given time!')
@@ -550,7 +559,7 @@ async def main():
                         break
 
         # Save list of active bandits for eventual trace back of stimulation order
-        pickle.dump(active_bandits, open(('active' + save_name), 'wb'))
+        pickle.dump(active_bandits, open(('active' + new_file), 'wb'))
 
         # Close serial port
         ser.close()
@@ -564,7 +573,8 @@ async def main():
 
         await connection.stop()
 
-        with open(('flexions' + save_name), 'wb') as f:
+        # Save flexions to ease a new plot
+        with open(('flexions' + new_file), 'wb') as f:
             pickle.dump(flexions, f)
 
         # Plot the flexions for the whole measurement
