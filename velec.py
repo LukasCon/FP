@@ -127,23 +127,6 @@ def conv_to_message(velec):
 
             return message
 
-def define_twitch_velecs(velec_order):
-    velecs = []
-    for i in range(len(velec_order)):
-        name = 'velec' + str(velec_order[i])
-        # velecs.append(velec(velec_order[i]+4, name))
-        velecs.append(Velec(8, name))
-        velecs[i].cathodes([velec_order[i]])
-        velecs[i].amplitudes([5])
-        velecs[i].widths([300])
-        velecs[i].anodes([2])
-        # print(velecs[i])
-        velecs[i].define()
-        # time.sleep(1)
-        # velecs[i].stim()
-
-    return velecs
-
 # Example for defining a virtual electrode manually
 '''velec10 = Velec(10,'thumb')
 velec10.cathodes([13, 6])
@@ -152,6 +135,8 @@ velec10.widths([300, 200])
 velec10.anodes([2])
 print(velec10)
 velec10.define()
-velec10.stim()
+velec10.stim_on()
+time.sleep(2)
+velec10.stim_off()
 '''
 
