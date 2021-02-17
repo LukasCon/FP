@@ -30,6 +30,7 @@ n = 30                          # max number of stimulations in 'normal' search
 n_deeper = 8                    # max number of stimulations in deep search
 pause_between_ds = 3            # min number of stimulations between two deep searches of the same finger
 max_numb_of_ds = 2              # max number of deep searches for the same finger
+stim_time = 1                   # duration of stimulation in seconds
 aim_options = ['ind', 'mid', 'thumb']
 
 def vector(point1, point2, df_pos):
@@ -401,7 +402,7 @@ async def main():
             await connection.set_qtm_event(velec.name)
             velec.stim_on()
             # Stimulation time
-            await asyncio.sleep(1)
+            await asyncio.sleep(stim_time)
             velec.stim_off()
             await asyncio.sleep(0.5)
 
@@ -499,7 +500,7 @@ async def main():
                     # Stimulate predefined velecs
                     velec.stim_on()
                     # Stimulation time
-                    await asyncio.sleep(1)
+                    await asyncio.sleep(stim_time)
                     velec.stim_off()
                     await asyncio.sleep(0.5)
 

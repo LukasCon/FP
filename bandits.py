@@ -57,17 +57,17 @@ class Bandit():
                 self.undesired_mov[k] = undesired_movs[k]
 
         # index finger
-        # Update alpha and beta NOT with reward (0 OR 1), BUT with merged accuracy in the interval [0,1]
+        # *2 for more emphasis on the measurement and faster convergence
         self.prior_success_ind += accuracys[0] * 2
         self.prior_failure_ind += (1 - accuracys[0]) * 2
 
         # middle finger
-        # update alpha and beta NOT with reward (0 OR 1), BUT with merged accuracy in the interval [0,1]
+        # *2 for more emphasis on the measurement and faster convergence
         self.prior_success_mid += accuracys[1] * 2
         self.prior_failure_mid += (1 - accuracys[1]) * 2
 
         # thumb
-        # update alpha and beta NOT with reward (0 OR 1), BUT with merged accuracy in the interval [0,1]
+        # *2 for more emphasis on the measurement and faster convergence
         self.prior_success_thumb += accuracys[2] * 2
         self.prior_failure_thumb += (1 - accuracys[2]) * 2
 
